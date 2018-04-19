@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,32 +11,68 @@ namespace TapBugRepro
 {
   public partial class MainPage : ContentPage
   {
-    ObservableCollection<string> _Output = new ObservableCollection<string>();
     public MainPage()
     {
       InitializeComponent();
-      lvOutput.ItemsSource = _Output;
     }
 
-    const int threshold = 100;
-    void OnPan(object sender, PanUpdatedEventArgs e)
+    public int Value
     {
+      get => (int)GetValue(ValueProperty);
+      set => SetValue(ValueProperty, value);
+    }
+    public static readonly BindableProperty ValueProperty =
+        BindableProperty.Create(nameof(Value), typeof(int), typeof(MainPage), default(int));
+
+
+    const int threshold = 100;
+    private void OnPanUpdated(object sender, PanUpdatedEventArgs e)
+    {
+      if (e.StatusType == GestureStatus.Completed)
+        Debug.WriteLine(new string('*', 20));
+
       if (e.StatusType != GestureStatus.Running)
         return;
 
-      var x = Math.Abs(e.TotalX);
-      var y = Math.Abs(e.TotalY);
+      var value = CalculateBpm(e.TotalY);
 
-      if (Device.RuntimePlatform == Device.UWP && x + y < threshold)
+      if (value == 0)
         return;
 
-      var isX = x >= y;
-      var output = $"{(isX ? "X" : "Y")}: {(isX ? e.TotalX : e.TotalY)}";
-      _Output.Add(output);
-      lvOutput.ScrollTo(output, ScrollToPosition.End, false);
+      Value += -value;
     }
 
-    private void OnClear(object sender, EventArgs e) =>
-      _Output.Clear();
+    List<double> _History = new List<double>();
+    int CalculateBpm(double panDelta)
+    {
+      Debug.WriteLine(panDelta);
+
+      _History.Add(panDelta);
+
+      var result = _History.Sum() / GetFactor();
+      if (Math.Abs(result) > 1)
+      {
+        _History.Clear();
+        return (int)Math.Round(result);
+      }
+      return 0;
+    }
+
+    int GetFactor()
+    {       
+      switch (Device.RuntimePlatform)
+      {                    
+        case Device.UWP:
+        case Device.WinPhone:
+        case Device.WinRT:
+        case Device.Android:
+        case Device.iOS:
+        case Device.macOS:
+        default:
+          return 200;
+      }
+    }
+
+
   }
 }
