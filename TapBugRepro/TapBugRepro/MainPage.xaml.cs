@@ -34,7 +34,7 @@ namespace TapBugRepro
       if (e.StatusType != GestureStatus.Running)
         return;
 
-      var value = CalculateBpm(e.TotalY);
+      var value = CalculateValue(e.TotalY);
 
       if (value == 0)
         return;
@@ -43,7 +43,7 @@ namespace TapBugRepro
     }
 
     List<double> _History = new List<double>();
-    int CalculateBpm(double panDelta)
+    int CalculateValue(double panDelta)
     {
       Debug.WriteLine(panDelta);
 
